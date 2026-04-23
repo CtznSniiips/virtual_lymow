@@ -1,0 +1,10 @@
+{
+  "domain": "lymow",
+  "name": "Lymow",
+  "version": "0.1.0",
+  "documentation": "https://github.com/example/virtual-lymow",
+  "issue_tracker": "https://github.com/example/virtual-lymow/issues",
+  "codeowners": ["@you"],
+  "config_flow": true,
+  "requirements": ["pillow>=10.0.0"]
+}

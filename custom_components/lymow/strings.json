@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Lymow mower",
+        "description": "Configure snapshot polling and motion detection.",
+        "data": {
+          "mower_ip": "Mower IP address",
+          "scan_interval": "Polling interval (seconds)",
+          "motion_threshold": "Motion threshold",
+          "docked_still_polls": "Still polls before docked guess"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lymow options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)",
+          "motion_threshold": "Motion threshold",
+          "docked_still_polls": "Still polls before docked guess"
+        }
+      }
+    }
+  }
+}
