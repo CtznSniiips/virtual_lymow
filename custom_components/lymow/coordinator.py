@@ -12,7 +12,7 @@ from PIL import Image, ImageChops, ImageStat
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_DOCKED_STILL_POLLS,
@@ -77,15 +77,14 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
     async def _async_update_data(self) -> LymowData:
         frame = await self._capture_snapshot()
         if frame is None:
-            if self.data is not None:
-                return LymowData(
-                    image_bytes=self.data.image_bytes,
-                    motion=False,
-                    docked_guess=self.data.docked_guess,
-                    status=STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state,
-                    average_delta=None,
-                )
-            raise UpdateFailed("Unable to fetch snapshot from mower RTSP stream")
+            previous_data = self.data or self._fallback_data()
+            return LymowData(
+                image_bytes=previous_data.image_bytes,
+                motion=False,
+                docked_guess=previous_data.docked_guess,
+                status=STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state,
+                average_delta=None,
+            )
 
         avg_delta = None
         motion = False
@@ -113,6 +112,16 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
             docked_guess=docked_guess,
             status=status,
             average_delta=avg_delta,
+        )
+
+    def _fallback_data(self) -> LymowData:
+        """Return safe defaults when no prior coordinator data exists."""
+        return LymowData(
+            image_bytes=None,
+            motion=False,
+            docked_guess=False,
+            status=STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state,
+            average_delta=None,
         )
 
     async def _capture_snapshot(self) -> bytes | None:
