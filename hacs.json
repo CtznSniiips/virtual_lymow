@@ -1,5 +1,5 @@
 {
-  "name": "Lymow",
+  "name": "Virtual Lymow",
   "content_in_root": false,
   "domains": ["sensor", "binary_sensor", "camera", "select"],
   "homeassistant": "2024.8.0",

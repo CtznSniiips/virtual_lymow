@@ -32,7 +32,7 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[CONF_MOWER_IP])
             self._abort_if_unique_id_configured()
             return self.async_create_entry(
-                title=f"Lymow {user_input[CONF_MOWER_IP]}",
+                title=f"Virtual Lymow {user_input[CONF_MOWER_IP]}",
                 data=user_input,
             )
 
@@ -44,7 +44,7 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Range(min=15, max=3600),
                 ),
                 vol.Optional(CONF_MOTION_THRESHOLD, default=DEFAULT_MOTION_THRESHOLD): vol.All(
-                    float,
+                    vol.Coerce(float),
                     vol.Range(min=1.0, max=255.0),
                 ),
                 vol.Optional(
@@ -81,7 +81,7 @@ class LymowOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_MOTION_THRESHOLD,
                     default=current.get(CONF_MOTION_THRESHOLD, DEFAULT_MOTION_THRESHOLD),
-                ): vol.All(float, vol.Range(min=1.0, max=255.0)),
+                ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=255.0)),
                 vol.Optional(
                     CONF_DOCKED_STILL_POLLS,
                     default=current.get(CONF_DOCKED_STILL_POLLS, DEFAULT_DOCKED_STILL_POLLS),

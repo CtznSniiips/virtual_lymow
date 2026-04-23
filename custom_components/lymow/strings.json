@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to Lymow mower",
+        "title": "Connect to Virtual Lymow mower",
         "description": "Configure snapshot polling and motion detection.",
         "data": {
           "mower_ip": "Mower IP address",
@@ -16,7 +16,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Lymow options",
+        "title": "Virtual Lymow options",
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "motion_threshold": "Motion threshold",

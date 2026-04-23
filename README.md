@@ -1,6 +1,6 @@
-# Lymow Home Assistant Custom Integration
+# Virtual Lymow Home Assistant Custom Integration
 
-HACS-style custom integration for Lymow mowers using the hidden RTSP endpoint:
+HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP endpoint:
 
 `rtsp://<MOWER_IP>:10022/h264ESVideoTest`
 
@@ -24,9 +24,9 @@ HACS-style custom integration for Lymow mowers using the hidden RTSP endpoint:
 ## Install (HACS)
 
 1. Add this repo as a **Custom repository** in HACS (type: **Integration**).
-2. Install **Lymow** from HACS.
+2. Install **Virtual Lymow** from HACS.
 3. Restart Home Assistant.
-4. Add integration: **Settings → Devices & Services → Add Integration → Lymow**.
+4. Add integration: **Settings → Devices & Services → Add Integration → Virtual Lymow**.
 5. Enter mower IP and tuning options.
 
 ## Tuning
