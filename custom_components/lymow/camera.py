@@ -46,7 +46,13 @@ class LymowSnapshotCamera(LymowEntity, Camera):
     _attr_name = "Mower Snapshot"
     _attr_unique_id = SNAPSHOT_UNIQUE_ID
 
+    def __init__(self, coordinator) -> None:
+        LymowEntity.__init__(self, coordinator)
+        Camera.__init__(self)
+    
     async def async_camera_image(self, width=None, height=None):
-        if self.coordinator.data.image_bytes is None:
+        if self.coordinator.data is None or self.coordinator.data.image_bytes is None:
             await self.coordinator.async_request_refresh()
+        if self.coordinator.data is None:
+            return None
         return self.coordinator.data.image_bytes
