@@ -167,6 +167,7 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
 
 
 def _compute_status(override_state: str, motion: bool, docked_guess: bool) -> str:
+    """Compute displayed mower status from override + inferred state."""
     if override_state != STATE_AUTO:
         return override_state
     if docked_guess:
