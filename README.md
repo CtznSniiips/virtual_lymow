@@ -1,4 +1,4 @@
-# <img width="24px" src="./custom_components/lymow/brand/logo.png" alt="EmbyWrapped"></img> Virtual Lymow Home Assistant Custom Integration
+# <img width="48px" src="./custom_components/lymow/brand/logo.png" alt="EmbyWrapped"></img> Virtual Lymow Home Assistant Custom Integration
 
 HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP endpoint:
 
