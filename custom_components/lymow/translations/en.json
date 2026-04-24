@@ -8,13 +8,11 @@
           "mower_ip": "Mower IP address",
           "scan_interval": "Polling interval (seconds)",
           "motion_threshold": "Motion threshold",
-          "docked_still_polls": "Still polls before docked guess"
         },
         "data_description": {
           "mower_ip": "IP or hostname of the mower's local web server (for example 192.168.1.25).",
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
           "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",
-          "docked_still_polls": "How many consecutive still snapshots indicate the mower is likely docked."
         }
       }
     }
@@ -26,12 +24,10 @@
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "motion_threshold": "Motion threshold",
-          "docked_still_polls": "Still polls before docked guess"
         },
         "data_description": {
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
           "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",
-          "docked_still_polls": "How many consecutive still snapshots indicate the mower is likely docked."
         }
       }
     }
