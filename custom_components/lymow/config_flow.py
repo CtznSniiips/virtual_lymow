@@ -8,6 +8,11 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .const import (
     CONF_DOCKED_STILL_POLLS,
@@ -50,7 +55,9 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_DOCKED_STILL_POLLS,
                     default=DEFAULT_DOCKED_STILL_POLLS,
-                ): vol.All(int, vol.Range(min=1, max=100)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=1, max=100, step=1, mode=NumberSelectorMode.BOX)
+                ),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -82,7 +89,9 @@ class LymowOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_DOCKED_STILL_POLLS,
                     default=current.get(CONF_DOCKED_STILL_POLLS, DEFAULT_DOCKED_STILL_POLLS),
-                ): vol.All(int, vol.Range(min=1, max=100)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=1, max=100, step=1, mode=NumberSelectorMode.BOX)
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
