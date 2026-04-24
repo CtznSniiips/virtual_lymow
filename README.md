@@ -1,5 +1,5 @@
 <p align="center">
-<img width="200px" src="./custom_components/lymow/brand/logo.png" alt="Virtual Lymow"></img>
+<img width="256px" src="./custom_components/lymow/brand/logo.png" alt="Virtual Lymow"></img>
 </p>
 
 # Virtual Lymow Home Assistant Custom Integration
