@@ -190,9 +190,8 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
     avg_delta = float(stat.mean[0])
     return avg_delta >= threshold, avg_delta
 
-
 def _detect_dock_markers(frame: bytes) -> bool:
-    """Detect dock markers as two similarly sized dark regions."""
+    """Detect dock markers as two similarly sized bright (white) regions."""
     image = Image.open(io.BytesIO(frame)).convert("L")
     image = image.resize((320, 180))
 
@@ -203,12 +202,12 @@ def _detect_dock_markers(frame: bytes) -> bool:
 
     visited: set[tuple[int, int]] = set()
     region_sizes: list[int] = []
-    dark_threshold = 100
+    bright_threshold = 180        # pixels ABOVE this are considered "white"
     minimum_region_area = 200
 
     for y in range(height):
         for x in range(width):
-            if (x, y) in visited or pixels[x, y] >= dark_threshold:
+            if (x, y) in visited or pixels[x, y] <= bright_threshold:  # skip dark pixels
                 continue
 
             stack: deque[tuple[int, int]] = deque([(x, y)])
@@ -220,7 +219,7 @@ def _detect_dock_markers(frame: bytes) -> bool:
                     continue
                 if current_x < 0 or current_y < 0 or current_x >= width or current_y >= height:
                     continue
-                if pixels[current_x, current_y] >= dark_threshold:
+                if pixels[current_x, current_y] <= bright_threshold:  # stop at dark pixels
                     continue
 
                 visited.add((current_x, current_y))
