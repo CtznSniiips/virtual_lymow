@@ -6,11 +6,13 @@ HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP end
 
 ## What it creates
 
-- `sensor.mower_status` (`mowing`, `docked`, `idle`, `unknown`)
+- `sensor.mower_status` (`Mowing`, `Docked`, `Idle`, `Unknown`, `Charging`)
 - `binary_sensor.mower_motion`
 - `binary_sensor.mower_docked_guess`
 - `camera.mower_snapshot`
-- `select.mower_state` (override/debugging)
+- `select.mower_state` (`Mowing`, `Docked`, `Idle`, `Unknown`, `Charging`, `Auto`) for override/debugging
+
+`Charging` is a manual status override. You can set it from automations (for example, when a smart plug detects high charging power draw), then set state back to `Auto` when charging ends.
 
 > Home Assistant custom integrations can directly provide a `select` entity. If you specifically need an `input_select.mower_state`, mirror this select with a helper + automation in the UI.
 

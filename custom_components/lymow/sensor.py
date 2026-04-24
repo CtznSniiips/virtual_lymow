@@ -22,7 +22,7 @@ async def async_setup_entry(
 
 
 class LymowStatusSensor(LymowEntity, SensorEntity):
-    """Reports mower state (mowing/docked/idle/unknown)."""
+    """Reports mower state (Mowing/Docked/Idle/Unknown/Charging)."""
 
     _attr_name = "Mower Status"
     _attr_unique_id = "lymow_status"
