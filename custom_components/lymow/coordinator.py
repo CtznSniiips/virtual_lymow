@@ -8,6 +8,8 @@ from datetime import timedelta
 import io
 import logging
 
+import cv2
+import numpy as np
 from PIL import Image, ImageChops, ImageStat
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,11 +17,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
-    CONF_DOCKED_STILL_POLLS,
     CONF_MOTION_THRESHOLD,
     CONF_MOWER_IP,
     CONF_SCAN_INTERVAL,
-    DEFAULT_DOCKED_STILL_POLLS,
     DEFAULT_MOTION_THRESHOLD,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -57,14 +57,8 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._mower_ip = merged[CONF_MOWER_IP]
         self._scan_interval = merged.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         self._motion_threshold = merged.get(CONF_MOTION_THRESHOLD, DEFAULT_MOTION_THRESHOLD)
-        self._docked_still_polls = merged.get(
-            CONF_DOCKED_STILL_POLLS,
-            DEFAULT_DOCKED_STILL_POLLS,
-        )
-
         self._rtsp_url = f"rtsp://{self._mower_ip}{RTSP_PATH}"
         self._last_frame: bytes | None = None
-        self._still_count = 0
         self.override_state = STATE_AUTO
 
         super().__init__(
@@ -96,14 +90,9 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
                 self._motion_threshold,
             )
 
+        docked_guess = await asyncio.to_thread(_detect_dock_markers, frame)
         self._last_frame = frame
 
-        if motion:
-            self._still_count = 0
-        else:
-            self._still_count += 1
-
-        docked_guess = self._still_count >= self._docked_still_polls
         status = _compute_status(self.override_state, motion, docked_guess)
 
         return LymowData(
@@ -200,3 +189,51 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
     stat = ImageStat.Stat(diff)
     avg_delta = float(stat.mean[0])
     return avg_delta >= threshold, avg_delta
+
+
+def _detect_dock_markers(frame: bytes) -> bool:
+    """Detect dock markers as two nearby square contours in the frame."""
+    buffer = np.frombuffer(frame, dtype=np.uint8)
+    image = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
+    if image is None:
+        return False
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    squares: list[tuple[int, int, int, int]] = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area < 1000:
+            continue
+
+        perimeter = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.04 * perimeter, True)
+        if len(approx) != 4:
+            continue
+
+        x, y, width, height = cv2.boundingRect(approx)
+        aspect_ratio = width / float(height)
+        if 0.8 < aspect_ratio < 1.2:
+            squares.append((x, y, width, height))
+
+    if len(squares) < 2:
+        return False
+
+    for first in range(len(squares)):
+        for second in range(first + 1, len(squares)):
+            marker_a = squares[first]
+            marker_b = squares[second]
+
+            size_ratio = marker_a[2] / marker_b[2]
+            if not 0.7 < size_ratio < 1.3:
+                continue
+
+            distance = np.linalg.norm(
+                np.array([marker_a[0], marker_a[1]]) - np.array([marker_b[0], marker_b[1]])
+            )
+            if distance < 300:
+                return True
+
+    return False
