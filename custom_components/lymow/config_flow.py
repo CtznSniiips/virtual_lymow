@@ -8,18 +8,11 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    NumberSelectorMode,
-)
 
 from .const import (
-    CONF_DOCKED_STILL_POLLS,
     CONF_MOTION_THRESHOLD,
     CONF_MOWER_IP,
     CONF_SCAN_INTERVAL,
-    DEFAULT_DOCKED_STILL_POLLS,
     DEFAULT_MOTION_THRESHOLD,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -52,12 +45,6 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Coerce(float),
                     vol.Range(min=1.0, max=255.0),
                 ),
-                vol.Optional(
-                    CONF_DOCKED_STILL_POLLS,
-                    default=DEFAULT_DOCKED_STILL_POLLS,
-                ): NumberSelector(
-                    NumberSelectorConfig(min=1, max=100, step=1, mode=NumberSelectorMode.BOX)
-                ),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -86,12 +73,6 @@ class LymowOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_MOTION_THRESHOLD,
                     default=current.get(CONF_MOTION_THRESHOLD, DEFAULT_MOTION_THRESHOLD),
                 ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=255.0)),
-                vol.Optional(
-                    CONF_DOCKED_STILL_POLLS,
-                    default=current.get(CONF_DOCKED_STILL_POLLS, DEFAULT_DOCKED_STILL_POLLS),
-                ): NumberSelector(
-                    NumberSelectorConfig(min=1, max=100, step=1, mode=NumberSelectorMode.BOX)
-                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
