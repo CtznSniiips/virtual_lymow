@@ -191,7 +191,7 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
     return avg_delta >= threshold, avg_delta
 
 def _detect_dock_markers(frame: bytes) -> bool:
-    """Detect dock markers as two similarly sized bright (white) regions."""
+    """Detect dock markers as two similarly sized, horizontally paired bright regions."""
     image = Image.open(io.BytesIO(frame)).convert("L")
     image = image.resize((320, 180))
 
@@ -201,17 +201,19 @@ def _detect_dock_markers(frame: bytes) -> bool:
         return False
 
     visited: set[tuple[int, int]] = set()
-    region_sizes: list[int] = []
-    bright_threshold = 180        # pixels ABOVE this are considered "white"
+    regions: list[tuple[int, float, float]] = []  # (size, centroid_x, centroid_y)
+    bright_threshold = 180
     minimum_region_area = 200
 
     for y in range(height):
         for x in range(width):
-            if (x, y) in visited or pixels[x, y] <= bright_threshold:  # skip dark pixels
+            if (x, y) in visited or pixels[x, y] <= bright_threshold:
                 continue
 
             stack: deque[tuple[int, int]] = deque([(x, y)])
             region_size = 0
+            sum_x = 0
+            sum_y = 0
 
             while stack:
                 current_x, current_y = stack.pop()
@@ -219,11 +221,13 @@ def _detect_dock_markers(frame: bytes) -> bool:
                     continue
                 if current_x < 0 or current_y < 0 or current_x >= width or current_y >= height:
                     continue
-                if pixels[current_x, current_y] <= bright_threshold:  # stop at dark pixels
+                if pixels[current_x, current_y] <= bright_threshold:
                     continue
 
                 visited.add((current_x, current_y))
                 region_size += 1
+                sum_x += current_x
+                sum_y += current_y
 
                 for delta_x in (-1, 0, 1):
                     for delta_y in (-1, 0, 1):
@@ -232,15 +236,30 @@ def _detect_dock_markers(frame: bytes) -> bool:
                         stack.append((current_x + delta_x, current_y + delta_y))
 
             if region_size >= minimum_region_area:
-                region_sizes.append(region_size)
+                centroid_x = sum_x / region_size
+                centroid_y = sum_y / region_size
+                regions.append((region_size, centroid_x, centroid_y))
 
-    if len(region_sizes) < 2:
+    if len(regions) < 2:
         return False
 
-    region_sizes.sort(reverse=True)
-    largest = region_sizes[0]
-    second_largest = region_sizes[1]
-    if largest == 0:
+    regions.sort(key=lambda r: r[0], reverse=True)
+    largest_size, lx, ly = regions[0]
+    second_size, sx, sy = regions[1]
+
+    if largest_size == 0:
         return False
 
-    return second_largest >= largest * 0.5
+    # Regions must be similarly sized
+    if second_size < largest_size * 0.75:
+        return False
+
+    # Regions must be side-by-side: separated horizontally but at similar heights
+    horizontal_gap = abs(lx - sx)
+    vertical_gap = abs(ly - sy)
+    if horizontal_gap < width * 0.1:   # not far enough apart horizontally
+        return False
+    if vertical_gap > height * 0.2:    # too far apart vertically
+        return False
+
+    return True
