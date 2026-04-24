@@ -1,4 +1,4 @@
-# Virtual Lymow Home Assistant Custom Integration
+# <img width="24px" src="./custom_components/lymow/brand/logo.png" alt="EmbyWrapped"></img> Virtual Lymow Home Assistant Custom Integration
 
 HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP endpoint:
 
@@ -13,8 +13,6 @@ HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP end
 - `select.mower_state` (`Mowing`, `Docked`, `Idle`, `Unknown`, `Charging`, `Auto`) for override/debugging
 
 `Charging` is a manual status override. You can set it from automations (for example, when a smart plug detects high charging power draw), then set state back to `Auto` when charging ends.
-
-> Home Assistant custom integrations can directly provide a `select` entity. If you specifically need an `input_select.mower_state`, mirror this select with a helper + automation in the UI.
 
 ## Design
 
@@ -34,6 +32,6 @@ HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP end
 
 ## Tuning
 
-- **Polling interval**: lower = fresher updates, higher CPU/network usage.
+- **Polling interval**: lower = fresher updates, higher Lymow battery drain.
 - **Motion threshold**: higher = less sensitive movement detection.
 - **Still polls before docked guess**: how many no-motion updates trigger docked guess.
