@@ -1,6 +1,6 @@
-<div style="display: flex; justify-content: center; align-items: center; ">
+<p align="center">
 <img width="128px" src="./custom_components/lymow/brand/logo.png" alt="Virtual Lymow"></img>
-</div>
+</p>
 
 # Virtual Lymow Home Assistant Custom Integration
 
