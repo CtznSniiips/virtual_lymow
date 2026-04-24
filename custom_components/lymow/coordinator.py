@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 import io
 import logging
+from collections import deque
 
-import cv2
-import numpy as np
 from PIL import Image, ImageChops, ImageStat
 
 from homeassistant.config_entries import ConfigEntry
@@ -192,48 +191,56 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
 
 
 def _detect_dock_markers(frame: bytes) -> bool:
-    """Detect dock markers as two nearby square contours in the frame."""
-    buffer = np.frombuffer(frame, dtype=np.uint8)
-    image = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
-    if image is None:
+    """Detect dock markers as two similarly sized dark regions."""
+    image = Image.open(io.BytesIO(frame)).convert("L")
+    image = image.resize((320, 180))
+
+    width, height = image.size
+    pixels = image.load()
+    if pixels is None:
         return False
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    visited: set[tuple[int, int]] = set()
+    region_sizes: list[int] = []
+    dark_threshold = 100
+    minimum_region_area = 200
 
-    squares: list[tuple[int, int, int, int]] = []
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area < 1000:
-            continue
-
-        perimeter = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.04 * perimeter, True)
-        if len(approx) != 4:
-            continue
-
-        x, y, width, height = cv2.boundingRect(approx)
-        aspect_ratio = width / float(height)
-        if 0.8 < aspect_ratio < 1.2:
-            squares.append((x, y, width, height))
-
-    if len(squares) < 2:
-        return False
-
-    for first in range(len(squares)):
-        for second in range(first + 1, len(squares)):
-            marker_a = squares[first]
-            marker_b = squares[second]
-
-            size_ratio = marker_a[2] / marker_b[2]
-            if not 0.7 < size_ratio < 1.3:
+    for y in range(height):
+        for x in range(width):
+            if (x, y) in visited or pixels[x, y] >= dark_threshold:
                 continue
 
-            distance = np.linalg.norm(
-                np.array([marker_a[0], marker_a[1]]) - np.array([marker_b[0], marker_b[1]])
-            )
-            if distance < 300:
-                return True
+            stack: deque[tuple[int, int]] = deque([(x, y)])
+            region_size = 0
 
-    return False
+            while stack:
+                current_x, current_y = stack.pop()
+                if (current_x, current_y) in visited:
+                    continue
+                if current_x < 0 or current_y < 0 or current_x >= width or current_y >= height:
+                    continue
+                if pixels[current_x, current_y] >= dark_threshold:
+                    continue
+
+                visited.add((current_x, current_y))
+                region_size += 1
+
+                for delta_x in (-1, 0, 1):
+                    for delta_y in (-1, 0, 1):
+                        if delta_x == 0 and delta_y == 0:
+                            continue
+                        stack.append((current_x + delta_x, current_y + delta_y))
+
+            if region_size >= minimum_region_area:
+                region_sizes.append(region_size)
+
+    if len(region_sizes) < 2:
+        return False
+
+    region_sizes.sort(reverse=True)
+    largest = region_sizes[0]
+    second_largest = region_sizes[1]
+    if largest == 0:
+        return False
+
+    return second_largest >= largest * 0.5

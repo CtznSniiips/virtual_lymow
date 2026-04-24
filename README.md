@@ -20,6 +20,7 @@ HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP end
 - Polling snapshots every _N_ seconds (configurable)
 - One-shot `ffmpeg` snapshots (no continuous stream)
 - Built-in grayscale frame differencing motion detection
+- Pillow-only dock marker detection (no OpenCV/native dependency)
 
 ## Install (HACS)
 

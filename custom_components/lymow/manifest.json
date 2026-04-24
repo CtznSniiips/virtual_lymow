@@ -6,5 +6,5 @@
   "issue_tracker": "https://github.com/example/virtual-lymow/issues",
   "codeowners": ["@you"],
   "config_flow": true,
-  "requirements": ["opencv-python-headless>=4.10.0", "pillow>=10.0.0"]
+  "requirements": ["pillow>=10.0.0"]
 }
