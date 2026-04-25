@@ -6,6 +6,27 @@ exclude-labels:
   - 'skip-changelog'
   - 'dependencies'
   - 'release'
+autolabeler:
+  - label: 'feature'
+    branch:
+      - '/^feat\/.+/'
+    title:
+      - '/^feat(\(.+\))?:/i'
+  - label: 'bug'
+    branch:
+      - '/^fix\/.+/'
+    title:
+      - '/^fix(\(.+\))?:/i'
+  - label: 'chore'
+    branch:
+      - '/^chore\/.+/'
+    title:
+      - '/^chore(\(.+\))?:/i'
+  - label: 'docs'
+    branch:
+      - '/^docs\/.+/'
+    title:
+      - '/^docs(\(.+\))?:/i'
 categories:
   - title: '🚀 Features'
     labels: ['enhancement', 'feature']
