@@ -24,7 +24,7 @@ async def async_setup_entry(
 class LymowStatusSensor(LymowEntity, SensorEntity):
     """Reports mower state (Mowing/Docked/Idle/Unknown/Charging)."""
 
-    _attr_name = "Mower Status"
+    _attr_name = "Status"
     _attr_unique_id = "virtual_lymow_status"
     _attr_icon = "mdi:robot-mower"
 

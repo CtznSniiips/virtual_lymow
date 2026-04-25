@@ -23,7 +23,7 @@ async def async_setup_entry(
 class LymowStateSelect(LymowEntity, SelectEntity):
     """UI-friendly state selector for forcing mower status."""
 
-    _attr_name = "Mower State"
+    _attr_name = "State"
     _attr_unique_id = "virtual_lymow_state"
     _attr_options = OVERRIDE_OPTIONS
     _attr_icon = "mdi:tune-variant"
