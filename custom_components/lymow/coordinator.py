@@ -25,6 +25,7 @@ from .const import (
     OVERRIDE_OPTIONS,
     RTSP_PATH,
     STATE_AUTO,
+    STATE_CHARGING,
     STATE_DOCKED,
     STATE_IDLE,
     STATE_MOWING,
@@ -32,6 +33,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_STATIONARY_STATES = {STATE_DOCKED, STATE_CHARGING}
 
 
 @dataclass
@@ -59,6 +61,7 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._rtsp_url = f"rtsp://{self._mower_ip}{RTSP_PATH}"
         self._last_frame: bytes | None = None
         self.override_state = STATE_AUTO
+        self._last_auto_status: str = STATE_UNKNOWN
 
         super().__init__(
             hass,
@@ -71,11 +74,15 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         frame = await self._capture_snapshot()
         if frame is None:
             previous_data = self.data or self._fallback_data()
+            status = STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state
+            if self.override_state == STATE_AUTO:
+                status = _guard_stationary_to_idle(self._last_auto_status, status)
+                self._last_auto_status = status
             return LymowData(
                 image_bytes=previous_data.image_bytes,
                 motion=False,
                 docked_guess=previous_data.docked_guess,
-                status=STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state,
+                status=status,
                 average_delta=None,
             )
 
@@ -93,6 +100,9 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._last_frame = frame
 
         status = _compute_status(self.override_state, motion, docked_guess)
+        if self.override_state == STATE_AUTO:
+            status = _guard_stationary_to_idle(self._last_auto_status, status)
+            self._last_auto_status = status
 
         return LymowData(
             image_bytes=frame,
@@ -154,6 +164,8 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         if state not in OVERRIDE_OPTIONS:
             return
         self.override_state = state
+        if state == STATE_AUTO and self.data is not None:
+            self._last_auto_status = self.data.status
         if self.data is not None:
             self.async_set_updated_data(
                 LymowData(
@@ -175,6 +187,13 @@ def _compute_status(override_state: str, motion: bool, docked_guess: bool) -> st
     if motion:
         return STATE_MOWING
     return STATE_IDLE
+
+
+def _guard_stationary_to_idle(previous: str, new: str) -> str:
+    """Block a direct Docked/Charging → Idle transition; Mowing must occur first."""
+    if previous in _STATIONARY_STATES and new == STATE_IDLE:
+        return previous
+    return new
 
 
 def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[bool, float]:
