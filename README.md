@@ -48,8 +48,8 @@ Stationary state protection prevents the status from jumping straight from Docke
 
 ## Tuning
 
-- **Polling interval**: lower = fresher updates, higher Lymow battery drain.
-- **Motion threshold**: higher = less sensitive movement detection.
+- **Polling interval**: lower = fresher updates, higher Lymow battery drain. (default `180` seconds)
+- **Motion threshold**: higher = less sensitive movement detection. (default `22`)
 
 ## Design
 
