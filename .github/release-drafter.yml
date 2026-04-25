@@ -1,6 +1,11 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
-
+change-template: '- $TITLE (#$NUMBER) — @$AUTHOR'
+change-title-escapes: '\<*_&'
+exclude-labels:
+  - 'skip-changelog'
+  - 'dependencies'
+  - 'release'
 categories:
   - title: '🚀 Features'
     labels: ['enhancement', 'feature']
@@ -8,17 +13,17 @@ categories:
     labels: ['bug', 'fix']
   - title: '🧹 Maintenance'
     labels: ['chore', 'docs']
-
+  - title: '📦 Other Changes'
 version-resolver:
   major:
     labels: ['breaking']
   minor:
     labels: ['enhancement', 'feature']
   patch:
-    labels: ['bug', 'fix', 'chore']
+    labels: ['bug', 'fix', 'chore', 'docs']
   default: patch
-
 template: |
-  ## Changes
-
+  ## What's Changed
   $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
