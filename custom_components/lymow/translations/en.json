@@ -7,12 +7,12 @@
         "data": {
           "mower_ip": "Mower IP address",
           "scan_interval": "Polling interval (seconds)",
-          "motion_threshold": "Motion threshold",
+          "motion_threshold": "Motion threshold"
         },
         "data_description": {
           "mower_ip": "IP or hostname of the mower's local web server (for example 192.168.1.25).",
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
-          "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",
+          "motion_threshold": "Minimum image-difference score required to consider the mower as moving."
         }
       }
     }
@@ -23,11 +23,11 @@
         "title": "Virtual Lymow options",
         "data": {
           "scan_interval": "Polling interval (seconds)",
-          "motion_threshold": "Motion threshold",
+          "motion_threshold": "Motion threshold"
         },
         "data_description": {
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
-          "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",
+          "motion_threshold": "Minimum image-difference score required to consider the mower as moving."
         }
       }
     }
