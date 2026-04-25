@@ -1,7 +1,7 @@
 # Virtual Lymow Home Assistant Custom Integration
 
 <p align="center">
-<img width="256px" src="https://github.com/CtznSniiips/virtual-lymow/blob/main/custom_components/virtual-lymow/brand/logo.png?raw=true" alt="Virtual Lymow"></img>
+<img width="256px" src="https://github.com/CtznSniiips/virtual-lymow/blob/main/custom_components/virtual_lymow/brand/logo.png?raw=true" alt="Virtual Lymow"></img>
 </p>
 
 HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP endpoint:
