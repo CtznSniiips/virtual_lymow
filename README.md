@@ -32,9 +32,9 @@ Status is then computed from those two signals:
  - No dock markers, no motion → Idle
  - Camera unreachable → Unknown
 
-Manual override lets you force the status to any value from the UI or an automation, which is useful for states the camera can't detect on its own — like Charging. When you're done, set it back to Auto and the integration resumes making its own decisions.
+**Manual override** lets you force the status to any value from the UI or an automation, which is useful for states the camera can't detect on its own — like Charging. When you're done, set it back to Auto and the integration resumes making its own decisions.
 
-Stationary state protection prevents the status from jumping straight from Docked or Charging to Idle. Since a mower at rest in the dock and a mower sitting idle in a field could look the same to the camera (no motion, no dock markers visible, eg. at night), the integration won't call it Idle until it has first seen the mower actually Mowing — confirming it left its stationary position before coming to a stop.
+**Stationary state protection** prevents the status from jumping straight from Docked or Charging to Idle. Since a mower at rest in the dock and a mower sitting idle in a field could look the same to the camera (no motion, no dock markers visible, eg. at night), the integration won't call it Idle until it has first seen the mower actually Mowing — confirming it left its stationary position before coming to a stop.
 
 ## Install (HACS)
 
