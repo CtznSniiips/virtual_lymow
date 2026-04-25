@@ -167,12 +167,15 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         if state == STATE_AUTO and self.data is not None:
             self._last_auto_status = self.data.status
         if self.data is not None:
+            status = _compute_status(state, self.data.motion, self.data.docked_guess)
+            if state == STATE_AUTO:
+                status = _guard_stationary_to_idle(self._last_auto_status, status)
             self.async_set_updated_data(
                 LymowData(
                     image_bytes=self.data.image_bytes,
                     motion=self.data.motion,
                     docked_guess=self.data.docked_guess,
-                    status=_compute_status(state, self.data.motion, self.data.docked_guess),
+                    status=status,
                     average_delta=self.data.average_delta,
                 )
             )
