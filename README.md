@@ -19,7 +19,7 @@ HACS-style custom integration for Virtual Lymow mowers using the hidden RTSP end
 `Charging` is a manual status override. You can set it from automations (for example, when a smart plug detects high charging power draw), then set state back to `Auto` when charging ends.
 
 ## How it works
-The integration doesn't use any official Lymow API — instead it taps into a hidden video stream (RTSP) that the mower broadcasts over your local network. Every polling interval it grabs a single still frame from that stream using ffmpeg, then uses that image to figure out what the mower is up to.
+The integration doesn't use any official Lymow API (unfortunately there isn't one available as of yet) — so instead it taps into a hidden video stream (RTSP) that the mower broadcasts over your local network. Every polling interval it grabs a single still frame from that stream using ffmpeg, then uses that image to figure out what the mower is up to.
 
 **Motion detection** works by comparing the latest frame to the previous one. If enough pixels have changed between the two shots, the mower is considered to be moving. You can tune how sensitive this is with the motion threshold setting.
 
