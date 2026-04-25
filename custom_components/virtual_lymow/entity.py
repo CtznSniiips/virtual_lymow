@@ -13,7 +13,7 @@ class LymowEntity(CoordinatorEntity[LymowCoordinator]):
     def __init__(self, coordinator: LymowCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_device_info = {
-            "identifiers": {("lymow", coordinator.entry.entry_id)},
+            "identifiers": {("virtual_lymow", coordinator.entry.entry_id)},
             "name": "Lymow Mower",
             "manufacturer": "Lymow",
             "model": "RTSP Snapshot",

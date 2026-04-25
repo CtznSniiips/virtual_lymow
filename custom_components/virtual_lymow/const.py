@@ -1,6 +1,6 @@
-"""Constants for the Lymow integration."""
+"""Constants for the Virtual Lymow integration."""
 
-DOMAIN = "lymow"
+DOMAIN = "virtual_lymow"
 PLATFORMS = ["sensor", "binary_sensor", "camera", "select"]
 
 CONF_MOWER_IP = "mower_ip"

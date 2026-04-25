@@ -11,12 +11,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .entity import LymowEntity
 
-SNAPSHOT_UNIQUE_ID = "lymow_snapshot"
+SNAPSHOT_UNIQUE_ID = "virtual_lymow_snapshot"
 LEGACY_SNAPSHOT_UNIQUE_IDS = {
     "mower_snapshot",
     "snapshot",
-    "lymow_camera",
-    "lymow_mower_snapshot",
+    "virtual_lymow_camera",
+    "virtual_lymow_mower_snapshot",
 }
 
 

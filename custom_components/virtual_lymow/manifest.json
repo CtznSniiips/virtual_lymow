@@ -1,5 +1,5 @@
 {
-  "domain": "lymow",
+  "domain": "virtual_lymow",
   "name": "Virtual Lymow",
   "version": "1.0.0",
   "iot_class": "local_polling",
