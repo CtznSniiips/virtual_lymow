@@ -38,7 +38,7 @@ Status is then computed from those two signals:
 
 ## Install (HACS)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CtznSniiips&repository=virtual-lymow&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CtznSniiips&repository=virtual_lymow&category=integration)
 
 1. Add this repo as a **Custom repository** in HACS (type: **Integration**).
 2. Install **Virtual Lymow** from HACS.
