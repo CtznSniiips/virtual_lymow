@@ -43,7 +43,7 @@ async def async_setup_entry(
 class LymowSnapshotCamera(LymowEntity, Camera):
     """Exposes most recent snapshot as a camera entity."""
 
-    _attr_name = "Mower Snapshot"
+    _attr_name = "Snapshot"
     _attr_unique_id = SNAPSHOT_UNIQUE_ID
 
     def __init__(self, coordinator) -> None:

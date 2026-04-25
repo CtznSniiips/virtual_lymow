@@ -23,7 +23,7 @@ async def async_setup_entry(
 class LymowMotionBinarySensor(LymowEntity, BinarySensorEntity):
     """Binary sensor for inferred mower motion."""
 
-    _attr_name = "Mower Motion"
+    _attr_name = "Motion"
     _attr_unique_id = "virtual_lymow_motion"
     _attr_icon = "mdi:motion-sensor"
 
@@ -35,7 +35,7 @@ class LymowMotionBinarySensor(LymowEntity, BinarySensorEntity):
 class LymowDockedGuessBinarySensor(LymowEntity, BinarySensorEntity):
     """Binary sensor for guessed docked state."""
 
-    _attr_name = "Mower Docked Guess"
+    _attr_name = "Docked Guess"
     _attr_unique_id = "virtual_lymow_docked_guess"
     _attr_icon = "mdi:ev-station"
 
