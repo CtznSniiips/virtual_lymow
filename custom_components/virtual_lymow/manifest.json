@@ -1,11 +1,11 @@
 {
   "domain": "virtual_lymow",
   "name": "Virtual Lymow",
-  "version": "1.0.0",
-  "iot_class": "local_polling",
-  "documentation": "https://github.com/example/virtual-lymow",
-  "issue_tracker": "https://github.com/example/virtual-lymow/issues",
   "codeowners": ["@you"],
   "config_flow": true,
-  "requirements": ["pillow>=10.0.0"]
+  "documentation": "https://github.com/example/virtual-lymow",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/example/virtual-lymow/issues",
+  "requirements": ["pillow>=10.0.0"],
+  "version": "1.0.7"
 }
