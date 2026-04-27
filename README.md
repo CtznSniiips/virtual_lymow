@@ -30,7 +30,8 @@ Status is then computed from those two signals:
  - Dock markers visible → Docked
  - No dock markers, but motion detected → Mowing
  - No dock markers, no motion → Idle
- - Camera unreachable → Unknown
+ - Camera unreachable for less than the unknown timeout → last known status preserved
+ - Camera unreachable for longer than the unknown timeout → Unknown
 
 **Manual override** lets you force the status to any value from the UI or an automation, which is useful for states the camera can't detect on its own — like Charging. When you're done, set it back to Auto and the integration resumes making its own decisions.
 
@@ -50,6 +51,7 @@ Status is then computed from those two signals:
 
 - **Polling interval**: lower = fresher updates, higher Lymow battery drain. (default `180` seconds)
 - **Motion threshold**: higher = less sensitive movement detection. (default `22`)
+- **Unknown timeout**: how long the camera must be continuously unreachable before the status switches to `Unknown`. While the camera is unreachable but the timeout hasn't elapsed, the last known status is preserved — preventing brief overnight connection hiccups from flipping a `Docked` mower to `Unknown`. Set to `0` to disable the timeout and switch to `Unknown` immediately on any failed snapshot. (default `10` minutes)
 
 ## Design
 

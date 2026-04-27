@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 import io
 import logging
 from collections import deque
@@ -19,8 +19,10 @@ from .const import (
     CONF_MOTION_THRESHOLD,
     CONF_MOWER_IP,
     CONF_SCAN_INTERVAL,
+    CONF_UNKNOWN_TIMEOUT,
     DEFAULT_MOTION_THRESHOLD,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_UNKNOWN_TIMEOUT,
     DOMAIN,
     OVERRIDE_OPTIONS,
     RTSP_PATH,
@@ -58,8 +60,10 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._mower_ip = merged[CONF_MOWER_IP]
         self._scan_interval = merged.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         self._motion_threshold = merged.get(CONF_MOTION_THRESHOLD, DEFAULT_MOTION_THRESHOLD)
+        self._unknown_timeout = merged.get(CONF_UNKNOWN_TIMEOUT, DEFAULT_UNKNOWN_TIMEOUT)
         self._rtsp_url = f"rtsp://{self._mower_ip}{RTSP_PATH}"
         self._last_frame: bytes | None = None
+        self._last_successful_snapshot_time: datetime | None = None
         self.override_state = STATE_AUTO
         self._last_auto_status: str = STATE_UNKNOWN
 
@@ -74,8 +78,16 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         frame = await self._capture_snapshot()
         if frame is None:
             previous_data = self.data or self._fallback_data()
-            status = STATE_UNKNOWN if self.override_state == STATE_AUTO else self.override_state
-            if self.override_state == STATE_AUTO:
+            if self.override_state != STATE_AUTO:
+                status = self.override_state
+            else:
+                timeout_elapsed = (
+                    self._unknown_timeout == 0
+                    or self._last_successful_snapshot_time is None
+                    or (datetime.now() - self._last_successful_snapshot_time)
+                    >= timedelta(minutes=self._unknown_timeout)
+                )
+                status = STATE_UNKNOWN if timeout_elapsed else self._last_auto_status
                 status = _guard_stationary_to_idle(self._last_auto_status, status)
                 self._last_auto_status = status
             return LymowData(
@@ -98,6 +110,7 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
 
         docked_guess = await asyncio.to_thread(_detect_dock_markers, frame)
         self._last_frame = frame
+        self._last_successful_snapshot_time = datetime.now()
 
         status = _compute_status(self.override_state, motion, docked_guess)
         if self.override_state == STATE_AUTO:

@@ -6,9 +6,11 @@ PLATFORMS = ["sensor", "binary_sensor", "camera", "select"]
 CONF_MOWER_IP = "mower_ip"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_MOTION_THRESHOLD = "motion_threshold"
+CONF_UNKNOWN_TIMEOUT = "unknown_timeout"
 
 DEFAULT_SCAN_INTERVAL = 180
 DEFAULT_MOTION_THRESHOLD = 22.0
+DEFAULT_UNKNOWN_TIMEOUT = 10
 
 RTSP_PATH = ":10022/h264ESVideoTest"
 
