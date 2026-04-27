@@ -51,7 +51,7 @@ Status is then computed from those two signals:
 
 - **Polling interval**: lower = fresher updates, higher Lymow battery drain. (default `180` seconds)
 - **Motion threshold**: higher = less sensitive movement detection. (default `22`)
-- **Unknown timeout**: how long the camera must be continuously unreachable before the status switches to `Unknown`. While the camera is unreachable but the timeout hasn't elapsed, the last known status is preserved — preventing brief overnight connection hiccups from flipping a `Docked` mower to `Unknown`. Set to `0` to disable the timeout and switch to `Unknown` immediately on any failed snapshot. (default `10` minutes)
+- **Unknown timeout**: how long the camera must be continuously unreachable before the status switches to `Unknown`. While the camera is unreachable but the timeout hasn't elapsed, the last known status is preserved — preventing brief overnight connection hiccups from flipping a `Docked` mower to `Unknown` and/or preventing switches to `Unknown` if the mower is briefly outside of Wifi range. Set to `0` to disable the timeout and switch to `Unknown` immediately on any failed snapshot. (default `10` minutes)
 
 ## Design
 
