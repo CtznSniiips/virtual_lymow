@@ -212,24 +212,62 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
     avg_delta = float(stat.mean[0])
     return avg_delta >= threshold, avg_delta
 
+_ADAPTIVE_BLOCK_SIZE = 48   # local block side-length (pixels) for adaptive threshold
+_ADAPTIVE_PERCENTILE = 0.82  # within each block, pixels above this percentile → "bright"
+_ADAPTIVE_MIN_AREA = 80      # minimum connected-component size to consider
+
+
 def _detect_dock_markers(frame: bytes) -> bool:
-    """Detect dock markers as two similarly sized, horizontally paired bright regions."""
+    """Detect dock markers as two similarly sized, horizontally paired bright regions.
+
+    The image is divided into overlapping local blocks and each block is independently
+    thresholded at its own Nth-percentile brightness.  This means a pixel is considered
+    "bright" only relative to its immediate surroundings, which:
+
+    * works regardless of absolute ambient light level (dim or bright dock),
+    * breaks the long-range connectivity path between the dim marker pixels and
+      the brighter background at the edges of the frame, and
+    * makes no assumption about *where* in the frame the markers appear, so it
+      works for any camera angle or mount position.
+
+    After the adaptive binary image is produced, connected-component analysis
+    finds candidate bright regions.  ALL region pairs are then tested (not just
+    the two largest) for the marker geometry: similar size, horizontal separation,
+    and vertical alignment.
+    """
     image = Image.open(io.BytesIO(frame)).convert("L")
     image = image.resize((320, 180))
-
     width, height = image.size
     pixels = image.load()
     if pixels is None:
         return False
 
+    # --- 1. Build adaptive binary image --------------------------------------
+    # Each overlapping block votes on whether its pixels are locally bright.
+    # Using 50 % overlap (step = block_size // 2) smooths block boundaries.
+    binary: list[list[int]] = [[0] * width for _ in range(height)]
+    step = _ADAPTIVE_BLOCK_SIZE // 2
+
+    for by in range(0, height, step):
+        for bx in range(0, width, step):
+            x0, x1 = bx, min(width, bx + _ADAPTIVE_BLOCK_SIZE)
+            y0, y1 = by, min(height, by + _ADAPTIVE_BLOCK_SIZE)
+            block_vals = sorted(
+                pixels[x, y] for y in range(y0, y1) for x in range(x0, x1)
+            )
+            threshold = block_vals[int(len(block_vals) * _ADAPTIVE_PERCENTILE)]
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    if pixels[x, y] > threshold:
+                        binary[y][x] = 1
+
+    # --- 2. Flood-fill connected bright regions ------------------------------
     visited: set[tuple[int, int]] = set()
     regions: list[tuple[int, float, float]] = []  # (size, centroid_x, centroid_y)
-    bright_threshold = 180
-    minimum_region_area = 200
 
     for y in range(height):
         for x in range(width):
-            if (x, y) in visited or pixels[x, y] <= bright_threshold:
+            if (x, y) in visited or binary[y][x] == 0:
                 continue
 
             stack: deque[tuple[int, int]] = deque([(x, y)])
@@ -243,7 +281,7 @@ def _detect_dock_markers(frame: bytes) -> bool:
                     continue
                 if current_x < 0 or current_y < 0 or current_x >= width or current_y >= height:
                     continue
-                if pixels[current_x, current_y] <= bright_threshold:
+                if binary[current_y][current_x] == 0:
                     continue
 
                 visited.add((current_x, current_y))
@@ -257,31 +295,30 @@ def _detect_dock_markers(frame: bytes) -> bool:
                             continue
                         stack.append((current_x + delta_x, current_y + delta_y))
 
-            if region_size >= minimum_region_area:
-                centroid_x = sum_x / region_size
-                centroid_y = sum_y / region_size
-                regions.append((region_size, centroid_x, centroid_y))
+            if region_size >= _ADAPTIVE_MIN_AREA:
+                regions.append((region_size, sum_x / region_size, sum_y / region_size))
 
     if len(regions) < 2:
         return False
 
+    # --- 3. Find any region pair matching the dock-marker geometry -----------
+    # Searching ALL pairs (not just the two largest) means a single giant
+    # background blob does not prevent the actual marker regions from matching.
     regions.sort(key=lambda r: r[0], reverse=True)
-    largest_size, lx, ly = regions[0]
-    second_size, sx, sy = regions[1]
 
-    if largest_size == 0:
-        return False
+    for i, (sz1, cx1, cy1) in enumerate(regions):
+        for sz2, cx2, cy2 in regions[i + 1:]:
+            size_ratio = sz2 / sz1  # sz1 >= sz2 because list is sorted desc
+            horizontal_gap = abs(cx1 - cx2)
+            vertical_gap = abs(cy1 - cy2)
 
-    # Regions must be similarly sized
-    if second_size < largest_size * 0.75:
-        return False
+            if (size_ratio >= 0.5                  # similarly sized
+                    and horizontal_gap >= width * 0.1   # far enough apart horizontally
+                    and vertical_gap <= height * 0.2):  # close enough vertically
+                _LOGGER.debug(
+                    "Dock markers found: sizes=%d/%d ratio=%.2f hgap=%.0f vgap=%.0f",
+                    sz1, sz2, size_ratio, horizontal_gap, vertical_gap,
+                )
+                return True
 
-    # Regions must be side-by-side: separated horizontally but at similar heights
-    horizontal_gap = abs(lx - sx)
-    vertical_gap = abs(ly - sy)
-    if horizontal_gap < width * 0.1:   # not far enough apart horizontally
-        return False
-    if vertical_gap > height * 0.2:    # too far apart vertically
-        return False
-
-    return True
+    return False
