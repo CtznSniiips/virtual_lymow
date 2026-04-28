@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ipaddress
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -20,6 +22,27 @@ from .const import (
     DOMAIN,
 )
 
+_HOSTNAME_LABEL = re.compile(r"(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
+
+
+def _validate_mower_host(value: str) -> str:
+    """Validate mower host as either an IP address or hostname."""
+    host = vol.Coerce(str)(value).strip()
+    if not host:
+        raise vol.Invalid("Host cannot be empty")
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        normalized = host[:-1] if host.endswith(".") else host
+        if len(normalized) > 253 or not normalized:
+            raise vol.Invalid("Invalid hostname") from None
+        if not all(_HOSTNAME_LABEL.fullmatch(label) for label in normalized.split(".")):
+            raise vol.Invalid("Invalid hostname") from None
+        return normalized.lower()
+    else:
+        return host
+
 
 class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Lymow."""
@@ -27,18 +50,9 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_MOWER_IP])
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=f"Virtual Lymow {user_input[CONF_MOWER_IP]}",
-                data=user_input,
-            )
-
         schema = vol.Schema(
             {
-                vol.Required(CONF_MOWER_IP): str,
+                vol.Required(CONF_MOWER_IP): vol.All(str, _validate_mower_host),
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
                     int,
                     vol.Range(min=15, max=3600),
@@ -53,6 +67,20 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
             }
         )
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                user_input = {**user_input, CONF_MOWER_IP: _validate_mower_host(user_input[CONF_MOWER_IP])}
+            except vol.Invalid:
+                errors[CONF_MOWER_IP] = "invalid_mower_ip"
+            else:
+                await self.async_set_unique_id(user_input[CONF_MOWER_IP])
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=f"Virtual Lymow {user_input[CONF_MOWER_IP]}",
+                    data=user_input,
+                )
+
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
