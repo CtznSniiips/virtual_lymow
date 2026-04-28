@@ -13,8 +13,10 @@ from .const import (
     CONF_MOTION_THRESHOLD,
     CONF_MOWER_IP,
     CONF_SCAN_INTERVAL,
+    CONF_UNKNOWN_TIMEOUT,
     DEFAULT_MOTION_THRESHOLD,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_UNKNOWN_TIMEOUT,
     DOMAIN,
 )
 
@@ -45,6 +47,10 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Coerce(float),
                     vol.Range(min=1.0, max=255.0),
                 ),
+                vol.Optional(CONF_UNKNOWN_TIMEOUT, default=DEFAULT_UNKNOWN_TIMEOUT): vol.All(
+                    int,
+                    vol.Range(min=0, max=1440),
+                ),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -73,6 +79,10 @@ class LymowOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_MOTION_THRESHOLD,
                     default=current.get(CONF_MOTION_THRESHOLD, DEFAULT_MOTION_THRESHOLD),
                 ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=255.0)),
+                vol.Optional(
+                    CONF_UNKNOWN_TIMEOUT,
+                    default=current.get(CONF_UNKNOWN_TIMEOUT, DEFAULT_UNKNOWN_TIMEOUT),
+                ): vol.All(int, vol.Range(min=0, max=1440)),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
