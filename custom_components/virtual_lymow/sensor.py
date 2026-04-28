@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -18,7 +18,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([LymowStatusSensor(coordinator), LymowMotionDeltaSensor(coordinator)])
+    async_add_entities(
+        [
+            LymowStatusSensor(coordinator),
+            LymowMotionDeltaSensor(coordinator),
+            LymowLastSnapshotSuccessSensor(coordinator),
+            LymowLastSnapshotErrorSensor(coordinator),
+        ]
+    )
 
 
 class LymowStatusSensor(LymowEntity, SensorEntity):
@@ -46,3 +53,37 @@ class LymowMotionDeltaSensor(LymowEntity, SensorEntity):
     def native_value(self):
         value = self.coordinator.data.average_delta
         return round(value, 2) if value is not None else None
+
+
+class LymowLastSnapshotSuccessSensor(LymowEntity, SensorEntity):
+    """Diagnostic timestamp of the last successful snapshot capture."""
+
+    _attr_name = "Last Snapshot Success"
+    _attr_unique_id = "virtual_lymow_last_snapshot_success"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:camera-check"
+
+    @property
+    def native_value(self):
+        return self.coordinator.last_successful_snapshot_time
+
+
+class LymowLastSnapshotErrorSensor(LymowEntity, SensorEntity):
+    """Diagnostic details for the most recent snapshot error."""
+
+    _attr_name = "Last Snapshot Error"
+    _attr_unique_id = "virtual_lymow_last_snapshot_error"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:camera-alert"
+
+    @property
+    def native_value(self):
+        return self.coordinator.last_snapshot_error
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "error_type": self.coordinator.last_snapshot_error_type,
+            "error_message": self.coordinator.last_snapshot_error_message,
+        }

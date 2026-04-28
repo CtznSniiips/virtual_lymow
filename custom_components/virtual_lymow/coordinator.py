@@ -14,6 +14,7 @@ from PIL import Image, ImageChops, ImageStat
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_MOTION_THRESHOLD,
@@ -64,6 +65,8 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._rtsp_url = f"rtsp://{self._mower_ip}{RTSP_PATH}"
         self._last_frame: bytes | None = None
         self._last_successful_snapshot_time: datetime | None = None
+        self._last_snapshot_error_type: str | None = None
+        self._last_snapshot_error_message: str | None = None
         self.override_state = STATE_AUTO
         self._last_auto_status: str = STATE_UNKNOWN
 
@@ -84,7 +87,7 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
                 timeout_elapsed = (
                     self._unknown_timeout == 0
                     or self._last_successful_snapshot_time is None
-                    or (datetime.now() - self._last_successful_snapshot_time)
+                    or (dt_util.utcnow() - self._last_successful_snapshot_time)
                     >= timedelta(minutes=self._unknown_timeout)
                 )
                 status = STATE_UNKNOWN if timeout_elapsed else self._last_auto_status
@@ -110,7 +113,6 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
 
         docked_guess = await asyncio.to_thread(_detect_dock_markers, frame)
         self._last_frame = frame
-        self._last_successful_snapshot_time = datetime.now()
 
         status = _compute_status(self.override_state, motion, docked_guess)
         if self.override_state == STATE_AUTO:
@@ -159,18 +161,58 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
-        except TimeoutError:
+        except TimeoutError as err:
+            self._set_snapshot_error("timeout", str(err) or "Snapshot timed out after 20 seconds")
             _LOGGER.warning("ffmpeg snapshot timed out for %s", self._rtsp_url)
             return None
         except OSError as err:
+            self._set_snapshot_error("execution_error", str(err))
             _LOGGER.error("Unable to execute ffmpeg: %s", err)
             return None
 
-        if process.returncode != 0 or not stdout:
-            _LOGGER.debug("ffmpeg failed (%s): %s", process.returncode, stderr.decode(errors="ignore"))
+        if process.returncode != 0:
+            stderr_text = stderr.decode(errors="ignore").strip()
+            error_message = stderr_text or f"ffmpeg exited with return code {process.returncode}"
+            self._set_snapshot_error("non_zero_return_code", error_message)
+            _LOGGER.debug("ffmpeg failed (%s): %s", process.returncode, stderr_text)
             return None
 
+        if not stdout:
+            self._set_snapshot_error("execution_error", "ffmpeg returned no image bytes")
+            return None
+
+        self._last_successful_snapshot_time = dt_util.utcnow()
+        self._set_snapshot_error(None, None)
         return stdout
+
+    @property
+    def last_successful_snapshot_time(self) -> datetime | None:
+        """Return the timestamp of the last successful snapshot."""
+        return self._last_successful_snapshot_time
+
+    @property
+    def last_snapshot_error(self) -> str | None:
+        """Return the most recent snapshot error as a compact string."""
+        if self._last_snapshot_error_type is None:
+            return None
+        if self._last_snapshot_error_message:
+            return f"{self._last_snapshot_error_type}: {self._last_snapshot_error_message}"
+        return self._last_snapshot_error_type
+
+    @property
+    def last_snapshot_error_type(self) -> str | None:
+        """Return the most recent snapshot error category."""
+        return self._last_snapshot_error_type
+
+    @property
+    def last_snapshot_error_message(self) -> str | None:
+        """Return the most recent snapshot error details."""
+        return self._last_snapshot_error_message
+
+    def _set_snapshot_error(self, error_type: str | None, message: str | None) -> None:
+        """Store the latest snapshot error details."""
+        self._last_snapshot_error_type = error_type
+        self._last_snapshot_error_message = message
 
     async def async_set_override_state(self, state: str) -> None:
         """Set override state from select entity."""
