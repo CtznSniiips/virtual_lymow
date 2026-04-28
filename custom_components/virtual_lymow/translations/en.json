@@ -11,12 +11,15 @@
           "unknown_timeout": "Unknown timeout (minutes)"
         },
         "data_description": {
-          "mower_ip": "IP or hostname of the mower's local web server (for example 192.168.1.25).",
+          "mower_ip": "Enter an IPv4/IPv6 address or DNS hostname of the mower's local web server (examples: 192.168.1.25, fd00::25, mower.local).",
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
           "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",
           "unknown_timeout": "How long the camera must be unreachable before the status switches to Unknown. Snapshots that fail within this window preserve the last known status."
         }
       }
+    },
+    "error": {
+      "invalid_mower_ip": "Enter a valid IP address or hostname (for example 192.168.1.25, fd00::25, or mower.local)."
     }
   },
   "options": {
