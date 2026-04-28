@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import io
 import logging
-from collections import deque
 
 from PIL import Image, ImageChops, ImageStat
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -37,6 +38,9 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 _STATIONARY_STATES = {STATE_DOCKED, STATE_CHARGING}
+_STORAGE_VERSION = 1
+_WARMUP_SNAPSHOTS = 2
+_WARMUP_SNAPSHOT_DELAY_SECONDS = 3.0
 
 
 @dataclass
@@ -69,12 +73,43 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._last_snapshot_error_message: str | None = None
         self.override_state = STATE_AUTO
         self._last_auto_status: str = STATE_UNKNOWN
+        self._warmup_completed = False
+        self._store = Store(hass, _STORAGE_VERSION, f"{DOMAIN}_{entry.entry_id}")
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=self._scan_interval),
+        )
+
+    async def async_initialize(self) -> None:
+        """Restore persisted state before first refresh."""
+        restored = await self._store.async_load()
+        if not restored:
+            return
+
+        image_bytes = _decode_image(restored.get("image_b64"))
+        restored_status = restored.get("status")
+        status = restored_status if restored_status in OVERRIDE_OPTIONS else STATE_UNKNOWN
+        if self.override_state == STATE_AUTO:
+            self._last_auto_status = status
+
+        timestamp = restored.get("last_successful_snapshot_time")
+        if timestamp:
+            parsed = dt_util.parse_datetime(timestamp)
+            if parsed is not None:
+                self._last_successful_snapshot_time = parsed
+
+        self._last_frame = image_bytes
+        self.async_set_updated_data(
+            LymowData(
+                image_bytes=image_bytes,
+                motion=False,
+                docked_guess=bool(restored.get("docked_guess", False)),
+                status=status,
+                average_delta=restored.get("average_delta"),
+            )
         )
 
     async def _async_update_data(self) -> LymowData:
@@ -93,13 +128,15 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
                 status = STATE_UNKNOWN if timeout_elapsed else self._last_auto_status
                 status = _guard_stationary_to_idle(self._last_auto_status, status)
                 self._last_auto_status = status
-            return LymowData(
+            fallback_data = LymowData(
                 image_bytes=previous_data.image_bytes,
                 motion=False,
                 docked_guess=previous_data.docked_guess,
                 status=status,
                 average_delta=None,
             )
+            await self._persist_data(fallback_data)
+            return fallback_data
 
         avg_delta = None
         motion = False
@@ -110,6 +147,10 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
                 frame,
                 self._motion_threshold,
             )
+        elif not self._warmup_completed:
+            frame, motion, avg_delta = await self._run_warmup(frame)
+
+        self._warmup_completed = True
 
         docked_guess = await asyncio.to_thread(_detect_dock_markers, frame)
         self._last_frame = frame
@@ -119,13 +160,15 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
             status = _guard_stationary_to_idle(self._last_auto_status, status)
             self._last_auto_status = status
 
-        return LymowData(
+        new_data = LymowData(
             image_bytes=frame,
             motion=motion,
             docked_guess=docked_guess,
             status=status,
             average_delta=avg_delta,
         )
+        await self._persist_data(new_data)
+        return new_data
 
     def _fallback_data(self) -> LymowData:
         """Return safe defaults when no prior coordinator data exists."""
@@ -185,6 +228,28 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._set_snapshot_error(None, None)
         return stdout
 
+    async def _run_warmup(self, initial_frame: bytes) -> tuple[bytes, bool, float | None]:
+        """Capture extra startup frames to establish motion baseline quickly."""
+        frame = initial_frame
+        motion = False
+        avg_delta: float | None = None
+
+        for _ in range(_WARMUP_SNAPSHOTS):
+            await asyncio.sleep(_WARMUP_SNAPSHOT_DELAY_SECONDS)
+            next_frame = await self._capture_snapshot()
+            if next_frame is None:
+                break
+            detected, avg_delta = await asyncio.to_thread(
+                _detect_motion,
+                frame,
+                next_frame,
+                self._motion_threshold,
+            )
+            motion = motion or detected
+            frame = next_frame
+
+        return frame, motion, avg_delta
+
     @property
     def last_successful_snapshot_time(self) -> datetime | None:
         """Return the timestamp of the last successful snapshot."""
@@ -214,6 +279,21 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         self._last_snapshot_error_type = error_type
         self._last_snapshot_error_message = message
 
+    async def _persist_data(self, data: LymowData) -> None:
+        """Persist last-known snapshot and status for restart continuity."""
+        payload = {
+            "status": data.status,
+            "docked_guess": data.docked_guess,
+            "average_delta": data.average_delta,
+            "last_successful_snapshot_time": (
+                self._last_successful_snapshot_time.isoformat()
+                if self._last_successful_snapshot_time is not None
+                else None
+            ),
+            "image_b64": _encode_image(data.image_bytes),
+        }
+        await self._store.async_save(payload)
+
     async def async_set_override_state(self, state: str) -> None:
         """Set override state from select entity."""
         if state not in OVERRIDE_OPTIONS:
@@ -225,15 +305,15 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
             status = _compute_status(state, self.data.motion, self.data.docked_guess)
             if state == STATE_AUTO:
                 status = _guard_stationary_to_idle(self._last_auto_status, status)
-            self.async_set_updated_data(
-                LymowData(
-                    image_bytes=self.data.image_bytes,
-                    motion=self.data.motion,
-                    docked_guess=self.data.docked_guess,
-                    status=status,
-                    average_delta=self.data.average_delta,
-                )
+            updated_data = LymowData(
+                image_bytes=self.data.image_bytes,
+                motion=self.data.motion,
+                docked_guess=self.data.docked_guess,
+                status=status,
+                average_delta=self.data.average_delta,
             )
+            self.async_set_updated_data(updated_data)
+            await self._persist_data(updated_data)
 
 
 def _compute_status(override_state: str, motion: bool, docked_guess: bool) -> str:
@@ -266,6 +346,23 @@ def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[b
     stat = ImageStat.Stat(diff)
     avg_delta = float(stat.mean[0])
     return avg_delta >= threshold, avg_delta
+
+
+def _encode_image(image_bytes: bytes | None) -> str | None:
+    """Encode image bytes for JSON storage."""
+    if image_bytes is None:
+        return None
+    return base64.b64encode(image_bytes).decode("ascii")
+
+
+def _decode_image(image_b64: str | None) -> bytes | None:
+    """Decode image bytes from JSON storage."""
+    if not image_b64:
+        return None
+    try:
+        return base64.b64decode(image_b64)
+    except ValueError:
+        return None
 
 _ADAPTIVE_BLOCK_SIZE = 48   # local block side-length (pixels) for adaptive threshold
 _ADAPTIVE_PERCENTILE = 0.82  # within each block, pixels above this percentile → "bright"

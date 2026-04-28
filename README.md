@@ -58,5 +58,7 @@ Status is then computed from those two signals:
 - Native `DataUpdateCoordinator`
 - Polling snapshots every _N_ seconds (configurable)
 - One-shot `ffmpeg` snapshots (no continuous stream)
+- Two fixed warm-up snapshots at startup (3 seconds apart) to quickly establish first-run motion baseline
+- Persisted last-known snapshot/status for restart continuity
 - Built-in grayscale frame differencing motion detection
 - Pillow-only dock marker detection (no OpenCV/native dependency)
