@@ -10,8 +10,6 @@ from collections import deque
 import io
 import logging
 
-from PIL import Image, ImageChops, ImageStat
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -346,6 +344,7 @@ def _guard_stationary_to_idle(previous: str, new: str) -> str:
 
 def _detect_motion(previous: bytes, current: bytes, threshold: float) -> tuple[bool, float]:
     """Return whether two snapshots indicate meaningful motion."""
+    from PIL import Image, ImageChops, ImageStat  # noqa: PLC0415
     prev_img = Image.open(io.BytesIO(previous)).convert("L")
     curr_img = Image.open(io.BytesIO(current)).convert("L")
 
@@ -380,7 +379,7 @@ _ADAPTIVE_MIN_AREA = 300     # minimum connected-component size to consider
 _MARKER_CONTRAST_MIN = 0.28  # min(dark_frac, light_frac) required inside a candidate bbox
 
 
-def _region_has_marker_contrast(image: Image.Image, xmn: int, xmx: int, ymn: int, ymx: int) -> bool:
+def _region_has_marker_contrast(image, xmn: int, xmx: int, ymn: int, ymx: int) -> bool:
     """Return True if the bounding box of a candidate region has the internal
     contrast signature of a Lymow dock marker.
 
@@ -405,7 +404,7 @@ def _region_has_marker_contrast(image: Image.Image, xmn: int, xmx: int, ymn: int
     if x1 <= x0 or y1 <= y0:
         return False
     crop = image.crop((x0, y0, x1, y1))
-    pixels = list(crop.get_flattened_data())
+    pixels = list(crop.getdata())
     if not pixels:
         return False
     mean_val = sum(pixels) / len(pixels)
@@ -440,6 +439,7 @@ def _detect_dock_markers(frame: bytes) -> bool:
       Uniform environmental blobs (sky, grass, reflections) are rejected here
       even if they happen to pass the geometric filter.
     """
+    from PIL import Image  # noqa: PLC0415
     image = Image.open(io.BytesIO(frame)).convert("L")
     image = image.resize((320, 180))
     width, height = image.size

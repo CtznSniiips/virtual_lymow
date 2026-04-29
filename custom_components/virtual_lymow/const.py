@@ -1,7 +1,9 @@
 """Constants for the Virtual Lymow integration."""
 
+from homeassistant.const import Platform
+
 DOMAIN = "virtual_lymow"
-PLATFORMS = ["sensor", "binary_sensor", "camera", "select"]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CAMERA, Platform.SELECT]
 
 CONF_MOWER_NAME = "mower_name"
 CONF_MOWER_IP = "mower_ip"
