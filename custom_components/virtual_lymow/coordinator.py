@@ -420,7 +420,8 @@ def _detect_dock_markers(frame: bytes) -> bool:
 
     # --- 2. Flood-fill connected bright regions ------------------------------
     visited: set[tuple[int, int]] = set()
-    regions: list[tuple[int, float, float]] = []  # (size, centroid_x, centroid_y)
+    # (size, centroid_x, centroid_y, xmin, xmax, ymin, ymax)
+    regions: list[tuple[int, float, float, int, int, int, int]] = []
 
     for y in range(height):
         for x in range(width):
@@ -431,6 +432,10 @@ def _detect_dock_markers(frame: bytes) -> bool:
             region_size = 0
             sum_x = 0
             sum_y = 0
+            bbox_xmin = width
+            bbox_xmax = 0
+            bbox_ymin = height
+            bbox_ymax = 0
 
             while stack:
                 current_x, current_y = stack.pop()
@@ -445,6 +450,14 @@ def _detect_dock_markers(frame: bytes) -> bool:
                 region_size += 1
                 sum_x += current_x
                 sum_y += current_y
+                if current_x < bbox_xmin:
+                    bbox_xmin = current_x
+                if current_x > bbox_xmax:
+                    bbox_xmax = current_x
+                if current_y < bbox_ymin:
+                    bbox_ymin = current_y
+                if current_y > bbox_ymax:
+                    bbox_ymax = current_y
 
                 for delta_x in (-1, 0, 1):
                     for delta_y in (-1, 0, 1):
@@ -453,7 +466,12 @@ def _detect_dock_markers(frame: bytes) -> bool:
                         stack.append((current_x + delta_x, current_y + delta_y))
 
             if region_size >= _ADAPTIVE_MIN_AREA:
-                regions.append((region_size, sum_x / region_size, sum_y / region_size))
+                regions.append((
+                    region_size,
+                    sum_x / region_size,
+                    sum_y / region_size,
+                    bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax,
+                ))
 
     if len(regions) < 2:
         return False
@@ -472,8 +490,8 @@ def _detect_dock_markers(frame: bytes) -> bool:
     # pairs such as sky strips, ground edges, and foliage blobs.
     regions.sort(key=lambda r: r[0], reverse=True)
 
-    for i, (sz1, cx1, cy1) in enumerate(regions):
-        for sz2, cx2, cy2 in regions[i + 1:]:
+    for i, (sz1, cx1, cy1, xmn1, xmx1, ymn1, ymx1) in enumerate(regions):
+        for sz2, cx2, cy2, xmn2, xmx2, ymn2, ymx2 in regions[i + 1:]:
             size_ratio = sz2 / sz1  # sz1 >= sz2 because list is sorted desc
             horizontal_gap = abs(cx1 - cx2)
             vertical_gap = abs(cy1 - cy2)
@@ -486,10 +504,23 @@ def _detect_dock_markers(frame: bytes) -> bool:
                 and height * 0.25 <= cy2 <= height * 0.92
             )
 
-            if (size_ratio >= 0.60                                   # similar size (was 0.50)
-                    and width * 0.15 <= horizontal_gap <= width * 0.55  # bounded horiz. gap (was >= 0.10 only)
-                    and vertical_gap <= height * 0.15                # tighter vert. alignment (was 0.20)
-                    and both_in_y_band):                             # exclude sky/ground strips (new)
+            # Reject any region whose bounding box bleeds to a frame edge.
+            # Dock marker QR squares are interior to the frame; edge-touching
+            # blobs are sky, ground strips, or out-of-frame objects.
+            _EDGE_X = int(width * 0.04)    # 4 % of width  ≈ 13 px
+            _EDGE_Y = int(height * 0.04)   # 4 % of height ≈  7 px
+            both_edge_free = (
+                xmn1 > _EDGE_X and xmx1 < width - _EDGE_X
+                and ymn1 > _EDGE_Y and ymx1 < height - _EDGE_Y
+                and xmn2 > _EDGE_X and xmx2 < width - _EDGE_X
+                and ymn2 > _EDGE_Y and ymx2 < height - _EDGE_Y
+            )
+
+            if (size_ratio >= 0.60                                   # similar size
+                    and width * 0.15 <= horizontal_gap <= width * 0.55  # bounded horiz. gap
+                    and vertical_gap <= height * 0.10                # tight vert. alignment (was 0.15)
+                    and both_in_y_band                               # exclude sky/ground strips
+                    and both_edge_free):                             # exclude frame-edge blobs (new)
                 _LOGGER.debug(
                     "Dock markers found: sizes=%d/%d ratio=%.2f hgap=%.0f vgap=%.0f",
                     sz1, sz2, size_ratio, horizontal_gap, vertical_gap,
