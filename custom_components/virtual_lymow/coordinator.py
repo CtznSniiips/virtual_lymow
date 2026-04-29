@@ -318,10 +318,14 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
 
 
 def _compute_status(override_state: str, motion: bool, docked_guess: bool) -> str:
-    """Compute displayed mower status from override + inferred state."""
+    """Compute displayed mower status from override + inferred state.
+
+    Motion acts as a veto on docked_guess: a mower that is moving cannot
+    simultaneously be in the dock, so detected motion takes precedence.
+    """
     if override_state != STATE_AUTO:
         return override_state
-    if docked_guess:
+    if docked_guess and not motion:
         return STATE_DOCKED
     if motion:
         return STATE_MOWING
@@ -366,8 +370,8 @@ def _decode_image(image_b64: str | None) -> bytes | None:
         return None
 
 _ADAPTIVE_BLOCK_SIZE = 48   # local block side-length (pixels) for adaptive threshold
-_ADAPTIVE_PERCENTILE = 0.82  # within each block, pixels above this percentile → "bright"
-_ADAPTIVE_MIN_AREA = 80      # minimum connected-component size to consider
+_ADAPTIVE_PERCENTILE = 0.90  # within each block, pixels above this percentile → "bright"
+_ADAPTIVE_MIN_AREA = 300     # minimum connected-component size to consider
 
 
 def _detect_dock_markers(frame: bytes) -> bool:
@@ -457,6 +461,15 @@ def _detect_dock_markers(frame: bytes) -> bool:
     # --- 3. Find any region pair matching the dock-marker geometry -----------
     # Searching ALL pairs (not just the two largest) means a single giant
     # background blob does not prevent the actual marker regions from matching.
+    #
+    # Constraints are derived from a reference dock snapshot at 320×180:
+    #   - Marker sizes ≈ 631 and 488 px  → size_ratio ≈ 0.77
+    #   - Horizontal centroid gap ≈ 102 px (32 % of width)
+    #   - Vertical centroid gap   ≈   2 px ( 1 % of height)
+    #   - Marker centroid y       ≈ 127 px (70 % of height)
+    # Tolerances are wide enough to handle mild camera-angle variation and
+    # lower-light captures while excluding common outdoor false-positive
+    # pairs such as sky strips, ground edges, and foliage blobs.
     regions.sort(key=lambda r: r[0], reverse=True)
 
     for i, (sz1, cx1, cy1) in enumerate(regions):
@@ -465,9 +478,18 @@ def _detect_dock_markers(frame: bytes) -> bool:
             horizontal_gap = abs(cx1 - cx2)
             vertical_gap = abs(cy1 - cy2)
 
-            if (size_ratio >= 0.5                  # similarly sized
-                    and horizontal_gap >= width * 0.1   # far enough apart horizontally
-                    and vertical_gap <= height * 0.2):  # close enough vertically
+            # Both centroids must sit within the middle vertical band of the
+            # frame, excluding the top sky/foliage zone and the bottom ground
+            # strip without being overly restrictive about exact position.
+            both_in_y_band = (
+                height * 0.25 <= cy1 <= height * 0.92
+                and height * 0.25 <= cy2 <= height * 0.92
+            )
+
+            if (size_ratio >= 0.60                                   # similar size (was 0.50)
+                    and width * 0.15 <= horizontal_gap <= width * 0.55  # bounded horiz. gap (was >= 0.10 only)
+                    and vertical_gap <= height * 0.15                # tighter vert. alignment (was 0.20)
+                    and both_in_y_band):                             # exclude sky/ground strips (new)
                 _LOGGER.debug(
                     "Dock markers found: sizes=%d/%d ratio=%.2f hgap=%.0f vgap=%.0f",
                     sz1, sz2, size_ratio, horizontal_gap, vertical_gap,
