@@ -320,12 +320,17 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
 def _compute_status(override_state: str, motion: bool, docked_guess: bool) -> str:
     """Compute displayed mower status from override + inferred state.
 
-    Motion acts as a veto on docked_guess: a mower that is moving cannot
-    simultaneously be in the dock, so detected motion takes precedence.
+    docked_guess takes unconditional priority over motion.  The dock-marker
+    detector now passes five independent filters (adaptive threshold, region
+    geometry, frame-edge exclusion, y-band position, and internal QR-pattern
+    contrast), making false positives extremely unlikely even while the mower
+    is in motion.  Keeping docked_guess dominant allows the status to flip to
+    DOCKED as soon as the markers are visible — which happens while the mower
+    is still backing into the station — rather than waiting for motion to cease.
     """
     if override_state != STATE_AUTO:
         return override_state
-    if docked_guess and not motion:
+    if docked_guess:
         return STATE_DOCKED
     if motion:
         return STATE_MOWING
