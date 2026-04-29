@@ -31,8 +31,8 @@ async def async_setup_entry(
 class LymowStatusSensor(LymowEntity, SensorEntity):
     """Reports mower state (Mowing/Docked/Idle/Unknown/Charging)."""
 
+    _unique_id_suffix = "status"
     _attr_name = "Status"
-    _attr_unique_id = "virtual_lymow_status"
     _attr_icon = "mdi:robot-mower"
 
     @property
@@ -43,8 +43,8 @@ class LymowStatusSensor(LymowEntity, SensorEntity):
 class LymowMotionDeltaSensor(LymowEntity, SensorEntity):
     """Diagnostic motion delta from image differencing."""
 
+    _unique_id_suffix = "motion_delta"
     _attr_name = "Motion Delta"
-    _attr_unique_id = "virtual_lymow_motion_delta"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = "px"
     _attr_icon = "mdi:chart-bell-curve-cumulative"
@@ -58,8 +58,8 @@ class LymowMotionDeltaSensor(LymowEntity, SensorEntity):
 class LymowLastSnapshotSuccessSensor(LymowEntity, SensorEntity):
     """Diagnostic timestamp of the last successful snapshot capture."""
 
+    _unique_id_suffix = "last_snapshot_success"
     _attr_name = "Last Snapshot Success"
-    _attr_unique_id = "virtual_lymow_last_snapshot_success"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:camera-check"
@@ -73,8 +73,8 @@ class LymowLastSnapshotSuccessSensor(LymowEntity, SensorEntity):
 class LymowLastSnapshotErrorSensor(LymowEntity, SensorEntity):
     """Diagnostic details for the most recent snapshot error."""
 
+    _unique_id_suffix = "last_snapshot_error"
     _attr_name = "Last Snapshot Error"
-    _attr_unique_id = "virtual_lymow_last_snapshot_error"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:camera-alert"
     _attr_entity_registry_enabled_default = False

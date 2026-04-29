@@ -14,6 +14,7 @@ from homeassistant.core import callback
 from .const import (
     CONF_MOTION_THRESHOLD,
     CONF_MOWER_IP,
+    CONF_MOWER_NAME,
     CONF_SCAN_INTERVAL,
     CONF_UNKNOWN_TIMEOUT,
     DEFAULT_MOTION_THRESHOLD,
@@ -52,6 +53,7 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         schema = vol.Schema(
             {
+                vol.Required(CONF_MOWER_NAME): str,
                 vol.Required(CONF_MOWER_IP): vol.All(str, _validate_mower_host),
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
                     int,
@@ -77,7 +79,7 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(user_input[CONF_MOWER_IP])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=f"Virtual Lymow {user_input[CONF_MOWER_IP]}",
+                    title=user_input[CONF_MOWER_NAME],
                     data=user_input,
                 )
 

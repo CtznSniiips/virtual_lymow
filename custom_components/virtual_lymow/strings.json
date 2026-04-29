@@ -5,12 +5,14 @@
         "title": "Connect to Virtual Lymow mower",
         "description": "Configure snapshot polling and motion detection.",
         "data": {
+          "mower_name": "Mower name",
           "mower_ip": "Mower IP address",
           "scan_interval": "Polling interval (seconds)",
           "motion_threshold": "Motion threshold",
           "unknown_timeout": "Unknown timeout (minutes)"
         },
         "data_description": {
+          "mower_name": "A friendly name to identify this mower (e.g. Front Garden).",
           "mower_ip": "Enter an IPv4/IPv6 address or DNS hostname of the mower's local web server (examples: 192.168.1.25, fd00::25, mower.local).",
           "scan_interval": "How often to fetch a new camera snapshot from the mower.",
           "motion_threshold": "Minimum image-difference score required to consider the mower as moving.",

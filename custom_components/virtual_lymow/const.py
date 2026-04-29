@@ -3,6 +3,7 @@
 DOMAIN = "virtual_lymow"
 PLATFORMS = ["sensor", "binary_sensor", "camera", "select"]
 
+CONF_MOWER_NAME = "mower_name"
 CONF_MOWER_IP = "mower_ip"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_MOTION_THRESHOLD = "motion_threshold"

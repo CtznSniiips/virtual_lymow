@@ -11,12 +11,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .entity import LymowEntity
 
-SNAPSHOT_UNIQUE_ID = "virtual_lymow_snapshot"
+_SNAPSHOT_UNIQUE_ID_SUFFIX = "snapshot"
 LEGACY_SNAPSHOT_UNIQUE_IDS = {
     "mower_snapshot",
     "snapshot",
     "virtual_lymow_camera",
     "virtual_lymow_mower_snapshot",
+    "virtual_lymow_snapshot",
 }
 
 
@@ -25,6 +26,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    new_unique_id = f"{entry.entry_id}_{_SNAPSHOT_UNIQUE_ID_SUFFIX}"
     entity_registry = er.async_get(hass)
     for entity_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if entity_entry.domain != "camera":
@@ -33,7 +35,7 @@ async def async_setup_entry(
             continue
         entity_registry.async_update_entity(
             entity_entry.entity_id,
-            new_unique_id=SNAPSHOT_UNIQUE_ID,
+            new_unique_id=new_unique_id,
         )
 
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -43,13 +45,13 @@ async def async_setup_entry(
 class LymowSnapshotCamera(LymowEntity, Camera):
     """Exposes most recent snapshot as a camera entity."""
 
+    _unique_id_suffix = _SNAPSHOT_UNIQUE_ID_SUFFIX
     _attr_name = "Snapshot"
-    _attr_unique_id = SNAPSHOT_UNIQUE_ID
 
     def __init__(self, coordinator) -> None:
         LymowEntity.__init__(self, coordinator)
         Camera.__init__(self)
-    
+
     async def async_camera_image(self, width=None, height=None):
         if self.coordinator.data is None or self.coordinator.data.image_bytes is None:
             await self.coordinator.async_request_refresh()
