@@ -496,12 +496,15 @@ def _detect_dock_markers(frame: bytes) -> bool:
             horizontal_gap = abs(cx1 - cx2)
             vertical_gap = abs(cy1 - cy2)
 
-            # Both centroids must sit within the middle vertical band of the
-            # frame, excluding the top sky/foliage zone and the bottom ground
-            # strip without being overly restrictive about exact position.
+            # Both centroids must sit within the lower portion of the frame.
+            # Dock markers appear in the bottom half of the image when the
+            # mower is at or near the dock; raising the lower bound from 0.25
+            # to 0.45 excludes upper-frame sky, foliage, and cloud blobs whose
+            # centroids typically fall above the 45 % line.  Real marker
+            # centroids across all tested captures are at ≥ 56 % of height.
             both_in_y_band = (
-                height * 0.25 <= cy1 <= height * 0.92
-                and height * 0.25 <= cy2 <= height * 0.92
+                height * 0.45 <= cy1 <= height * 0.92
+                and height * 0.45 <= cy2 <= height * 0.92
             )
 
             # Reject any region whose bounding box bleeds to a frame edge.
