@@ -63,6 +63,7 @@ class LymowLastSnapshotSuccessSensor(LymowEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:camera-check"
+    _attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self):
@@ -76,6 +77,7 @@ class LymowLastSnapshotErrorSensor(LymowEntity, SensorEntity):
     _attr_unique_id = "virtual_lymow_last_snapshot_error"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:camera-alert"
+    _attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self):
