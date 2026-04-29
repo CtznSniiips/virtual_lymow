@@ -54,7 +54,7 @@ class LymowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_MOWER_NAME): str,
-                vol.Required(CONF_MOWER_IP): vol.All(str, _validate_mower_host),
+                vol.Required(CONF_MOWER_IP): str,
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
                     int,
                     vol.Range(min=15, max=3600),
