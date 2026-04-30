@@ -297,9 +297,17 @@ class LymowCoordinator(DataUpdateCoordinator[LymowData]):
         """Set override state from select entity."""
         if state not in OVERRIDE_OPTIONS:
             return
+        previous_override = self.override_state
         self.override_state = state
         if state == STATE_AUTO and self.data is not None:
-            self._last_auto_status = self.data.status
+            # A mower can only charge while docked, so switching Charging → Auto
+            # with no detected motion means it is still at the dock.  Seed
+            # _last_auto_status with Docked so that _guard_stationary_to_idle
+            # resolves the status to Docked rather than leaving it on Charging.
+            if previous_override == STATE_CHARGING and not self.data.motion:
+                self._last_auto_status = STATE_DOCKED
+            else:
+                self._last_auto_status = self.data.status
         if self.data is not None:
             status = _compute_status(state, self.data.motion, self.data.docked_guess)
             if state == STATE_AUTO:
